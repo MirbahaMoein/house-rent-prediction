@@ -62,6 +62,7 @@ def predict_new_cases(prediction_array):
     return automl_model.predict(scaled_X)
 
 def save_results(df, auto_pred):
+    df.drop(["area3", "area2", "year3", "year2", "intercept"], axis= 1, inplace= True)
     df_column_order = df.columns.tolist()
     df_column_order.remove("full mortgage")
     df_column_order.append("full mortgage")
