@@ -70,7 +70,7 @@ def save_results(df, auto_pred):
     conc = pd.concat([df, pd.Series(auto_pred)], axis= 1)
     conc.columns = conc.columns.tolist()[:-1] + ["prediction"]
     conc["error percentage"] = (conc["full mortgage"] - conc["prediction"]).abs() / pd.concat([conc["prediction"], conc["full mortgage"]], axis=1).min(axis=1) * 100
-    conc.to_excel("new results.xlsx")
+    conc.to_excel("new_results.xlsx")
     
 save_new_cases()
 automl_model, x_scaler, X_cols, outlier_detection_model = read_trained_objects()
