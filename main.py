@@ -24,7 +24,7 @@ def percentage_rmse(X_val, y_val, estimator, labels,
 def save_new_cases():
     fullurl = "https://divar.ir/s/tehran/rent-apartment?sort=sort_date"
     ostad_zanjan_url = "https://divar.ir/s/tehran/rent-apartment/tehran-zanjan?districts=195&sort=sort_date"
-    clean_data(get_data(crawl_links(ostad_zanjan_url))).to_excel("newcases.xlsx")
+    clean_data(get_data(crawl_links(fullurl))).to_excel("newcases.xlsx")
 
 def read_trained_objects():
     automl_model = joblib.load("./Model/objs/trained_model.joblib")
@@ -74,8 +74,8 @@ def save_results(df, auto_pred):
     
 save_new_cases()
 automl_model, x_scaler, X_cols, outlier_detection_model = read_trained_objects()
-df = read_new_cases()
-prediction_array, df = preprocess_cases(df)
-auto_pred = predict_new_cases(prediction_array)
-save_results(df, auto_pred)
+#df = read_new_cases()
+#prediction_array, df = preprocess_cases(df)
+#auto_pred = predict_new_cases(prediction_array)
+#save_results(df, auto_pred)
 

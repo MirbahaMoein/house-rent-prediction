@@ -22,7 +22,7 @@ def crawl_links(url) -> set:
     def run_driver():
         chrome_options = Options()
         chrome_options.add_argument("--start-maximized")
-        chrome_options.add_argument("--headless")  
+        #chrome_options.add_argument("--headless")  
         driver = webdriver.Chrome(options=chrome_options)
         driver.get(url) #https://divar.ir/s/tehran/rent-apartment?sort=sort_date # https://divar.ir/s/tehran/rent-apartment/tehran-zanjan?sort=sort_date
         time.sleep(10)
@@ -36,21 +36,23 @@ def crawl_links(url) -> set:
             return driver.execute_script("return document.body.scrollHeight")
         
         def check_for_error(driver):
-            driver.find_element_by_css_selector(f"button.kt-button kt-button--primary kt-button--small").click()
+            driver.find_element(By.XPATH("/html/body/div/div[1]/div/main/div/div[2]/div/button")).click()
             time.sleep(20)
-            driver.find_element_by_css_selector(f"button.kt-button kt-button--primary kt-button--small")
-            
+            driver.find_element(By.XPATH("/html/body/div/div[1]/div/main/div/div[2]/div/button"))
         cases = set()  
         initial_height = height(driver)
         j = 0
         i = 1
+        height_check = 0
         pbar = tqdm(j+1)
         while True:
             html = driver.page_source
             soup = BeautifulSoup(html, features="html.parser")
-            caselist = soup.find_all("div", attrs= {"class": "post-card-item-af972 kt-col-6-bee95 kt-col-xxl-4-e9d46"})
+            caselist = soup.find_all("div", attrs= {"class": "post-list__widget-col-a3fe3"})
             for case in caselist:
+                #print(case)
                 cases.add(case)
+
             scroll(driver)
             i += 1
             j += 1
@@ -59,41 +61,48 @@ def crawl_links(url) -> set:
 
             current_height = height(driver)
             if current_height == initial_height:
-                if i % 10 == 0:
-                    try:
+                if i % 15 == 0:
+                    #try:
                         check_for_error(driver)
                         print("reload button appeared")
                         break
-                    except: 
-                        time.sleep(5)
-                        current_height = height(driver)
-                        if current_height == initial_height:
-                            print("height didnt change")
-                            break
-                        else:
-                            initial_height = current_height
-                            i = 1               
+                    #except: 
+                    #    time.sleep(5)
+                    #    current_height = height(driver)
+                    #    if current_height == initial_height:
+                    #        print("height didnt change")
+                    #        height_check += 1
+                    #        if height_check == 3:
+                    #            break        
+                    #    else:
+                    #        initial_height = current_height
+                    #        i = 1
+                               
             else:    
                 initial_height = current_height
                 i = 1
+            
         driver.quit()
+        
         return cases
     
-    try:
-        driver = run_driver()
-        return get_cases(driver)
-    except:
-        return crawl_links()
+    #try:
+    driver = run_driver()
+    return get_cases(driver)
+    #except:
+    #    return crawl_links(url)
 
 def get_data(cases) -> pd.DataFrame:
     
-    
     def get_values(case):
         def get_url(case):
+            #print()
+            #print("https://divar.ir" + case.a.get("href"))
             return "https://divar.ir" + case.a.get("href")
         
         def get_soup(url):
-            return BeautifulSoup(session.get(url, timeout= 10).text, features="html.parser")
+            time.sleep(3)
+            return BeautifulSoup(session.get(url, timeout= 20).text, features="html.parser")
             
         def get_title(soup):
             return soup.find("div", attrs= {"class": "kt-page-title__title kt-page-title__title--responsive-sized"}).text
@@ -105,10 +114,10 @@ def get_data(cases) -> pd.DataFrame:
             return soup.find("p", attrs= {"class": "kt-description-row__text kt-description-row__text--primary"}).text
         
         def get_area_year_rooms(soup):
-            area_built_rooms = soup.find_all("span", attrs= {"class": "kt-group-row-item__value"})
-            area = area_built_rooms[0].text
-            built = area_built_rooms[1].text
-            rooms = area_built_rooms[2].text
+            area_built_rooms = soup.find_all("tr", attrs= {"class": "kt-group-row__data-row"})
+            area = area_built_rooms[0].find_all('td')[0].text
+            built = area_built_rooms[0].find_all('td')[1].text
+            rooms = area_built_rooms[0].find_all('td')[2].text
             return area, built, rooms
         
         def get_rent_costs(soup):
@@ -148,27 +157,25 @@ def get_data(cases) -> pd.DataFrame:
             else:
                 tabaghe = np.nan
             return tabaghe
+        
         def get_elev_park_ware(soup):
-            epw = soup.find_all("div", attrs= {"class": "kt-group-row"})
-            if len(epw) == 2:
-                epw = epw[1].find_all("div")
-            else:
-                epw = epw[2].find_all("div")
-            elevator = len(epw[0].get("class")) == 1
-            parking = len(epw[1].get("class")) == 1
-            warehouse = len(epw[2].get("class")) == 1
+            epw = soup.find_all("tr", attrs= {"class": "kt-group-row__heading"})
+    
+            elevator = epw[-1].find_all('th')[0].get("class") == 'kt-group-row-item kt-group-row-item__header'
+            parking = epw[-1].find_all('th')[1].get("class") == 'kt-group-row-item kt-group-row-item__header'
+            warehouse = epw[-1].find_all('th')[2].get("class") == 'kt-group-row-item kt-group-row-item__header'
             return elevator, parking, warehouse
         
         session = requests.Session()
-        try:
-            url = get_url(case)
-        except:
-            return 0
+        #try:
+        url = get_url(case)
+        #except:
+        #    return 0
         try:
             soup = get_soup(url)
             title = get_title(soup)
         except:
-            time.sleep(10)
+            time.sleep(20)
             try:
                 soup = get_soup(url)
                 title = get_title(soup)
@@ -184,7 +191,7 @@ def get_data(cases) -> pd.DataFrame:
     
     df = pd.DataFrame(columns = ["title", "description", "zone", "area", "year", "number of rooms", "pish1", "rent1", "pish2", "rent2", "level", "elevator", "parking", "warehouse", "url"])
     for case in tqdm(cases):
-        time.sleep(2)
+        #time.sleep(2)
         try:
             title, description, zone, area, built, rooms, rent_pre_dict, level, elevator, parking, warehouse, url = get_values(case)
             df.loc[len(df)] = {
